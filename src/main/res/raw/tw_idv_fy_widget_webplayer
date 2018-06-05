@@ -1,6 +1,6 @@
-const player = videojs("video", { fluid: true });
-const url = "https://test.azul.com.tw:15200/api/video/stream?vd_id=11&token=eyJpdiI6InBsYnJ6RlZ6TEIrT09qblY0aDlRbmc9PSIsInZhbHVlIjoiU1kyNFwvMDNsbFZYc293N0ptSXM3d2VcL080ZlRpMmR5TXB5T1F1WXBueVFFbzQrUldxRGljSW5HWTNpNEJoOXdDUmQ5NUc1MXVLdTUzTzhLOUFucnEwcHRzVTVzRGRKQlp2UFZXK2VwcnNsRWV2a0NKenVlMFY0TFNJSmd0NVhGcFQxMHJkNm5yNGcwQ0o4aURcL2JQMFI0MnphcUpCTFVpaFI5RlBEUjBVbHJrMEFyVmJjNTRqVTg2elhyV29WYnBiIiwibWFjIjoiNmFlZjA0YzBlOTA5ZjgyZmMzYjViNjAzZDJiMTY3YzEzNTlmMjc3ODBiMTY3NTgyNTc3MTg0N2M3ODg3YzBkMCJ9";
-player.src({
-    src: url,
-    type: "video/mp4"
-})
+const player = videojs("video", { fluid: true }, () => JAVASCRIPTOBJ.ready());
+const play = url => player.src({ src:url, type:"video/mp4" });
+player.on("canplay", () => JAVASCRIPTOBJ.canplay(player.currentWidth(), player.currentHeight(), player.duration()));
+player.on("timeupdate", () => JAVASCRIPTOBJ.timeupdate(player.currentTime()));
+player.on("seeked", () => JAVASCRIPTOBJ.seeked());
+player.on("ended", () => JAVASCRIPTOBJ.ended());

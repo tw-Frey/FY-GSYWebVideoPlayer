@@ -1,118 +1,203 @@
 package tw.idv.fy.widget.gsywebplayer;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Handler;
+import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
+import android.util.Log;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 
 import java.io.FileDescriptor;
-import java.io.IOException;
+import java.util.Locale;
 import java.util.Map;
 
-import tv.danmaku.ijk.media.player.IMediaPlayer;
+import tv.danmaku.ijk.media.player.AbstractMediaPlayer;
 import tv.danmaku.ijk.media.player.MediaInfo;
-import tv.danmaku.ijk.media.player.misc.IMediaDataSource;
 import tv.danmaku.ijk.media.player.misc.ITrackInfo;
 
-public class WebViewMediaPlayer implements IMediaPlayer {
-    @Override
-    public void setDisplay(SurfaceHolder surfaceHolder) {
+@SuppressLint({"ClickableViewAccessibility", "SetJavaScriptEnabled"})
+public class WebViewMediaPlayer extends AbstractMediaPlayer {
 
+    private static final String JAVASCRIPTOBJ = "JAVASCRIPTOBJ";
+    private static final String ANDROID_ASSET = "file:///android_asset/";
+
+    private Context mContext;
+    private WebView mWebView;
+    private Uri mUri;
+    private Map<String, String> mMap;
+
+    /*package*/ WebViewMediaPlayer(Context context) {
+        mContext = context.getApplicationContext();
+        mHandler = new Handler(mContext.getMainLooper());
     }
 
     @Override
-    public void setDataSource(Context context, Uri uri) throws IOException, IllegalArgumentException, SecurityException, IllegalStateException {
-
+    public void setDataSource(FileDescriptor fileDescriptor) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public void setDataSource(Context context, Uri uri, Map<String, String> map) throws IOException, IllegalArgumentException, SecurityException, IllegalStateException {
-
+    public void setDataSource(String s) {
+        setDataSource(null, s == null ? null : Uri.parse(s));
     }
 
     @Override
-    public void setDataSource(FileDescriptor fileDescriptor) throws IOException, IllegalArgumentException, IllegalStateException {
-
+    public void setDataSource(Context context, Uri uri) {
+        setDataSource(context, uri, null);
     }
 
     @Override
-    public void setDataSource(String s) throws IOException, IllegalArgumentException, SecurityException, IllegalStateException {
-
+    public void setDataSource(Context context, Uri uri, Map<String, String> map) {
+        mUri = uri;
+        mMap = map;
     }
 
     @Override
     public String getDataSource() {
-        return null;
+        return mUri == null ? null : mUri.toString();
+    }
+
+    @Override
+    public void setDisplay(SurfaceHolder surfaceHolder) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setSurface(Surface surface) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void prepareAsync() throws IllegalStateException {
-
+        mHandler.post(() -> {
+            mWebView = new WebView(mContext) {
+                @Override
+                public boolean onTouchEvent(MotionEvent event) {
+                    return false;
+                }
+            };
+            WebSettings settings = mWebView.getSettings();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                settings.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            }
+            settings.setMediaPlaybackRequiresUserGesture(false);
+            settings.setAllowUniversalAccessFromFileURLs(true);
+            settings.setAllowFileAccessFromFileURLs(true);
+            settings.setAllowFileAccess(true);
+            settings.setAllowContentAccess(true);
+            settings.setJavaScriptEnabled(true);
+            mWebView.setBackgroundColor(Color.BLACK);
+            mWebView.setWebViewClient(new WebViewClient() {
+                @Nullable
+                @Override
+                public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+                    if (url != null && url.contains(ANDROID_ASSET) && url.endsWith("tw_idv_fy_widget_webplayer")) {
+                        return new WebResourceResponse(
+                                "text/javascript",
+                                "utf-8",
+                                view.getResources().openRawResource(R.raw.tw_idv_fy_widget_webplayer)
+                        );
+                    }
+                    return super.shouldInterceptRequest(view, url);
+                }
+                @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+                @Nullable
+                @Override
+                public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                    Uri uri = request.getUrl();
+                    if (uri != null && ANDROID_ASSET.equals(uri.getHost()) && "tw_idv_fy_widget_webplayer".equals(uri.getLastPathSegment())) {
+                        return new WebResourceResponse(
+                                "text/javascript",
+                                "utf-8",
+                                view.getResources().openRawResource(R.raw.tw_idv_fy_widget_webplayer)
+                        );
+                    }
+                    return super.shouldInterceptRequest(view, request);
+                }
+            });
+            mWebView.addJavascriptInterface(WebViewMediaPlayer.this, JAVASCRIPTOBJ);
+            mWebView.loadDataWithBaseURL(ANDROID_ASSET, mContext.getResources().getString(R.string.tw_idv_fy_widget_webplayer), "text/html", "UTF-8", null);
+        });
     }
 
     @Override
     public void start() throws IllegalStateException {
-
+        if (mWebView == null) return;
+        mHandler.post(() -> mWebView.evaluateJavascript("player.play()", null));
     }
 
     @Override
     public void stop() throws IllegalStateException {
-
+        Log.i("Faty", "stop");
     }
 
     @Override
     public void pause() throws IllegalStateException {
-
+        if (mWebView == null) return;
+        mHandler.post(() -> mWebView.evaluateJavascript("player.pause()", null));
     }
 
     @Override
-    public void setScreenOnWhilePlaying(boolean b) {
-
-    }
+    public void setScreenOnWhilePlaying(boolean b) {}
 
     @Override
     public int getVideoWidth() {
-        return 0;
+        return mWidth;
     }
 
     @Override
     public int getVideoHeight() {
-        return 0;
+        return mHeight;
     }
 
     @Override
     public boolean isPlaying() {
-        return false;
+        return true;
     }
 
     @Override
-    public void seekTo(long l) throws IllegalStateException {
-
+    public void seekTo(long time) throws IllegalStateException {
+        if (mWebView == null) return;
+        mHandler.post(() -> mWebView.evaluateJavascript(String.format(Locale.TAIWAN, "player.playbackRate(%f)", time / 1000f), null));
     }
 
     @Override
     public long getCurrentPosition() {
-        return 0;
+        return mCurrentTime;
     }
 
     @Override
     public long getDuration() {
-        return 0;
+        return mDuration;
     }
 
     @Override
     public void release() {
-
+        Log.i("Faty", "release");
+        if (mWebView == null) return;
+        mHandler.post(() -> mWebView.evaluateJavascript("player.dispose()", null));
     }
 
     @Override
     public void reset() {
-
+        Log.i("Faty", "reset");
     }
 
     @Override
     public void setVolume(float v, float v1) {
-
+        Log.i("Faty", "setVolume");
     }
 
     @Override
@@ -122,67 +207,28 @@ public class WebViewMediaPlayer implements IMediaPlayer {
 
     @Override
     public MediaInfo getMediaInfo() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
+    @Deprecated
     @Override
     public void setLogEnabled(boolean b) {
-
+        throw new UnsupportedOperationException();
     }
 
+    @Deprecated
     @Override
     public boolean isPlayable() {
-        return false;
+        return true;
     }
 
     @Override
-    public void setOnPreparedListener(OnPreparedListener onPreparedListener) {
+    public void setAudioStreamType(int i) {}
 
-    }
-
-    @Override
-    public void setOnCompletionListener(OnCompletionListener onCompletionListener) {
-
-    }
-
-    @Override
-    public void setOnBufferingUpdateListener(OnBufferingUpdateListener onBufferingUpdateListener) {
-
-    }
-
-    @Override
-    public void setOnSeekCompleteListener(OnSeekCompleteListener onSeekCompleteListener) {
-
-    }
-
-    @Override
-    public void setOnVideoSizeChangedListener(OnVideoSizeChangedListener onVideoSizeChangedListener) {
-
-    }
-
-    @Override
-    public void setOnErrorListener(OnErrorListener onErrorListener) {
-
-    }
-
-    @Override
-    public void setOnInfoListener(OnInfoListener onInfoListener) {
-
-    }
-
-    @Override
-    public void setOnTimedTextListener(OnTimedTextListener onTimedTextListener) {
-
-    }
-
-    @Override
-    public void setAudioStreamType(int i) {
-
-    }
-
+    @Deprecated
     @Override
     public void setKeepInBackground(boolean b) {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -195,15 +241,14 @@ public class WebViewMediaPlayer implements IMediaPlayer {
         return 0;
     }
 
+    @Deprecated
     @Override
     public void setWakeMode(Context context, int i) {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public void setLooping(boolean b) {
-
-    }
+    public void setLooping(boolean b) {}
 
     @Override
     public boolean isLooping() {
@@ -212,16 +257,60 @@ public class WebViewMediaPlayer implements IMediaPlayer {
 
     @Override
     public ITrackInfo[] getTrackInfo() {
-        return new ITrackInfo[0];
+        throw new UnsupportedOperationException();
     }
 
-    @Override
-    public void setSurface(Surface surface) {
-
+    public void setNeedMute(boolean needMute) {
+        if (mWebView == null) return;
+        mHandler.post(() -> mWebView.evaluateJavascript(needMute ? "player.muted(true)" : "player.muted(false)", null));
     }
 
-    @Override
-    public void setDataSource(IMediaDataSource iMediaDataSource) {
-
+    public void setSpeedPlaying(float speed) {
+        if (mWebView == null) return;
+        mHandler.post(() -> mWebView.evaluateJavascript(String.format(Locale.TAIWAN, "player.playbackRate(%f)", speed), null));
     }
+
+    public WebView getWebView() {
+        return mWebView;
+    }
+
+    @JavascriptInterface
+    public void ready() {
+        if (mWebView == null) return;
+        mHandler.post(() -> mWebView.evaluateJavascript(String.format("play('%s')", mUri), null));
+    }
+
+    @JavascriptInterface
+    public void canplay(float width, float height, float duration) {
+        mWidth = (int) width;
+        mHeight = (int) height;
+        mDuration = (long) (duration * 1000L);
+        notifyOnPrepared();
+    }
+
+    @JavascriptInterface
+    public void seeked() {
+        Log.i("Faty", "seeked");
+        notifyOnSeekComplete();
+    }
+
+    @JavascriptInterface
+    public void ended() {
+        Log.i("Faty", "ended");
+        notifyOnCompletion();
+    }
+
+    @JavascriptInterface
+    public void timeupdate(float currentTime) {
+        mCurrentTime = (long) (currentTime * 1000L);
+    }
+
+    @JavascriptInterface
+    public void progress() {}
+
+    private Handler mHandler;
+    private int mWidth;
+    private int mHeight;
+    private long mDuration;
+    private long mCurrentTime;
 }
