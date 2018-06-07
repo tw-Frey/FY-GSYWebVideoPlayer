@@ -5,10 +5,8 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
-import android.widget.FrameLayout;
 
 import com.shuyu.gsyvideoplayer.video.StandardGSYVideoPlayer;
-import com.shuyu.gsyvideoplayer.video.base.GSYBaseVideoPlayer;
 import com.shuyu.gsyvideoplayer.video.base.GSYVideoPlayer;
 import com.shuyu.gsyvideoplayer.video.base.GSYVideoViewBridge;
 
@@ -35,29 +33,28 @@ public class WebViewGSYVideoPlayer extends StandardGSYVideoPlayer {
 
     @Override
     protected void addTextureView() {
-        mTextureViewContainer
-                .addView(
-                        ((WebViewMediaPlayer) getGSYVideoManager().getPlayer().getMediaPlayer()).getWebView(),
-                        new LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                );
+        mTextureViewContainer.addView(
+                ((WebViewMediaPlayer) getGSYVideoManager().getPlayer().getMediaPlayer()).getWebView(),
+                new LayoutParams(MATCH_PARENT, MATCH_PARENT)
+        );
     }
 
-    /**
-     * 将自定义的效果也设置到全屏
-     */
-    @Override
-    public GSYBaseVideoPlayer startWindowFullscreen(Context context, boolean actionBar, boolean statusBar) {
-        return super.startWindowFullscreen(context, actionBar, statusBar);
+    protected void removeIMediaPlayer() {
+        mTextureViewContainer.removeAllViews();
     }
 
     @Override
     protected void resolveNormalVideoShow(View oldF, ViewGroup vp, GSYVideoPlayer gsyVideoPlayer) {
+        /*
+            因為 full player (oldF) 沒有經過 initVideoPlayer
+            所以 WebView 沒變 (共用了)
+            如果沒先把 WebView 除去 Parent
+            則再加回原 mTextureViewContainer 會報錯
+         */
+        if (oldF instanceof WebViewGSYVideoPlayer) {
+            ((WebViewGSYVideoPlayer) oldF).removeIMediaPlayer();
+        }
         super.resolveNormalVideoShow(oldF, vp, gsyVideoPlayer);
-    }
-
-    @Override
-    protected void resolveFullVideoShow(Context context, GSYBaseVideoPlayer gsyVideoPlayer, FrameLayout frameLayout) {
-        super.resolveFullVideoShow(context, gsyVideoPlayer, frameLayout);
     }
 
     @Override
