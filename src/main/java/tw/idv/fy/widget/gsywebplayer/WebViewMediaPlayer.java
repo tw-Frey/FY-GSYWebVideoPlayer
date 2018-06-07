@@ -170,7 +170,8 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
     @Override
     public void seekTo(long time) throws IllegalStateException {
         if (mWebView == null) return;
-        mHandler.post(() -> mWebView.evaluateJavascript(String.format(Locale.TAIWAN, "player.playbackRate(%f)", time / 1000f), null));
+        mCurrentTime = time;
+        mHandler.post(() -> mWebView.evaluateJavascript(String.format(Locale.TAIWAN, "player.currentTime(%f)", time / 1000f), null));
     }
 
     @Override
