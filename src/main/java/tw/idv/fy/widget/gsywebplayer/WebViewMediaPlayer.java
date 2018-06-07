@@ -169,8 +169,8 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
 
     @Override
     public void seekTo(long time) throws IllegalStateException {
-        if (mWebView == null) return;
         mCurrentTime = time;
+        if (mWebView == null) return;
         mHandler.post(() -> mWebView.evaluateJavascript(String.format(Locale.TAIWAN, "player.currentTime(%f)", time / 1000f), null));
     }
 
@@ -249,11 +249,15 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
     }
 
     @Override
-    public void setLooping(boolean b) {}
+    public void setLooping(boolean isLooping) {
+        mLooping = isLooping;
+        if (mWebView == null) return;
+        mHandler.post(() -> mWebView.evaluateJavascript(isLooping ? "player.loop(true)" : "player.loop(false)", null));
+    }
 
     @Override
     public boolean isLooping() {
-        return false;
+        return mLooping;
     }
 
     @Override
@@ -262,11 +266,13 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
     }
 
     public void setNeedMute(boolean needMute) {
+        mNeedMute = needMute;
         if (mWebView == null) return;
         mHandler.post(() -> mWebView.evaluateJavascript(needMute ? "player.muted(true)" : "player.muted(false)", null));
     }
 
     public void setSpeedPlaying(float speed) {
+        mSpeed = speed;
         if (mWebView == null) return;
         mHandler.post(() -> mWebView.evaluateJavascript(String.format(Locale.TAIWAN, "player.playbackRate(%f)", speed), null));
     }
@@ -278,7 +284,7 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
     @JavascriptInterface
     public void ready() {
         if (mWebView == null) return;
-        mHandler.post(() -> mWebView.evaluateJavascript(String.format("play('%s')", mUri), null));
+        mHandler.post(() -> mWebView.evaluateJavascript(String.format(Locale.TAIWAN,"play('%s', %f, %d, %b, %b)", mUri, mSpeed, mCurrentTime, mNeedMute, mLooping), null));
     }
 
     @JavascriptInterface
@@ -307,11 +313,17 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
     }
 
     @JavascriptInterface
-    public void progress() {}
+    public void progress(float percent) {
+        notifyOnBufferingUpdate((int) (percent * 100));
+    }
 
     private Handler mHandler;
     private int mWidth;
     private int mHeight;
     private long mDuration;
     private long mCurrentTime;
+    private float mSpeed = 1;
+    private boolean mLooping = false;
+    private boolean mNeedMute = false;
+
 }
