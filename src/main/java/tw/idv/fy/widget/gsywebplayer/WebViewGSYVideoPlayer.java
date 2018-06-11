@@ -2,8 +2,10 @@ package tw.idv.fy.widget.gsywebplayer;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.webkit.WebView;
 
 import com.shuyu.gsyvideoplayer.video.StandardGSYVideoPlayer;
@@ -62,4 +64,16 @@ public class WebViewGSYVideoPlayer extends StandardGSYVideoPlayer {
         return false;
     }
 
+    /**
+     * 触摸亮度dialog，調整亮度棒位置
+     */
+    @Override
+    protected void showBrightnessDialog(float percent) {
+        super.showBrightnessDialog(percent);
+        if (mBrightnessDialog != null) {
+            WindowManager.LayoutParams localLayoutParams = mBrightnessDialog.getWindow().getAttributes();
+            localLayoutParams.gravity = Gravity.TOP | Gravity.START;
+            mBrightnessDialog.getWindow().setAttributes(localLayoutParams);
+        }
+    }
 }
