@@ -8,6 +8,12 @@ const play = (url, speed, time, muted, loop) => {
     });
     player.src({ src:url, type:"video/mp4" });
 };
+const capture = ratio => {
+    let canvas = document.createElement("canvas");
+    [canvas.width, canvas.height] = [player.currentWidth(), player.currentHeight()];
+    canvas.getContext('2d').drawImage(document.querySelector("video"), 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL();
+}
 player.on("canplay", () => JAVASCRIPTOBJ.canplay(player.currentWidth(), player.currentHeight(), player.duration()));
 player.on("timeupdate", () => JAVASCRIPTOBJ.timeupdate(player.currentTime()));
 player.on("progress", () => JAVASCRIPTOBJ.progress(player.bufferedPercent()));
