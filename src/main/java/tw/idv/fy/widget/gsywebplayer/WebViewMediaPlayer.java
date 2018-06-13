@@ -100,15 +100,21 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
             settings.setJavaScriptEnabled(true);
             mWebView.setBackgroundColor(Color.BLACK);
             mWebView.setWebViewClient(new WebViewClient() {
+                private String check(Uri uri) {
+                    String name;
+                    if(String.valueOf(uri).startsWith(ANDROID_ASSET)
+                    && String.valueOf(name = uri.getLastPathSegment()).startsWith("tw_idv_fy_widget")) {
+                        return name;
+                    }
+                    return null;
+                }
                 @Nullable
                 @Override
                 public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
-                    if (url != null && url.contains(ANDROID_ASSET) && url.endsWith("tw_idv_fy_widget_webplayer")) {
-                        return new WebResourceResponse(
-                                "text/javascript",
-                                "utf-8",
-                                view.getResources().openRawResource(R.raw.tw_idv_fy_widget_webplayer)
-                        );
+                    String name = check(Uri.parse(url));
+                    if (name != null) {
+                        int rawID = view.getResources().getIdentifier(name, "raw", view.getContext().getPackageName());
+                        return new WebResourceResponse("text/javascript", "utf-8", view.getResources().openRawResource(rawID));
                     }
                     return super.shouldInterceptRequest(view, url);
                 }
@@ -116,13 +122,10 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
                 @Nullable
                 @Override
                 public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                    Uri uri = request.getUrl();
-                    if (uri != null && ANDROID_ASSET.equals(uri.getHost()) && "tw_idv_fy_widget_webplayer".equals(uri.getLastPathSegment())) {
-                        return new WebResourceResponse(
-                                "text/javascript",
-                                "utf-8",
-                                view.getResources().openRawResource(R.raw.tw_idv_fy_widget_webplayer)
-                        );
+                    String name = check(request.getUrl());
+                    if (name != null) {
+                        int rawID = view.getResources().getIdentifier(name, "raw", view.getContext().getPackageName());
+                        return new WebResourceResponse("text/javascript", "utf-8", view.getResources().openRawResource(rawID));
                     }
                     return super.shouldInterceptRequest(view, request);
                 }
