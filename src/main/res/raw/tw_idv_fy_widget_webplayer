@@ -1,4 +1,4 @@
-const player = videojs("video", { fluid: true }, () => JAVASCRIPTOBJ.ready());
+const player = videojs("video", { fluid: false }, () => JAVASCRIPTOBJ.ready());
 const play = (url, speed, time, muted, loop) => {
     player.one("canplay", () => {
         player.playbackRate(speed);
@@ -6,8 +6,51 @@ const play = (url, speed, time, muted, loop) => {
         player.muted(muted);
         player.loop(loop);
     });
-    player.src({ src:url, type:"video/mp4" });
+    player.src({ src: url, type: "video/mp4" });
 };
+const capture = ratio => {
+    let w_container = player.currentWidth();
+    let h_container = player.currentHeight();
+    let r_container = w_container / h_container;
+    let w_video = player.videoWidth();
+    let h_video = player.videoHeight();
+    let r_video = w_video / h_video;
+
+    let w_canvas, h_canvas;
+    if (r_container > r_video) {
+        /*
+            影片 fit 高度, 內縮 寬度
+        */
+        [h_canvas, w_canvas] = [h_container, h_container * r_video];
+    } else {
+        /*
+            影片 fit 寬度, 內縮 高度
+        */
+        [w_canvas, h_canvas] = [w_container, w_container / r_video];
+    }
+
+    /*
+        畫布大小要跟容器一樣大
+    */
+    let canvas = document.createElement("canvas");
+    [canvas.width, canvas.height] = [w_container, h_container];
+    /*
+        背景填色
+    */
+    let ctx_2d = canvas.getContext('2d');
+    ctx_2d.fillStyle = CANVAS_FILL_STYLE_COLOR;
+    ctx_2d.fillRect(0, 0, w_container, h_container)
+    /*
+        拓印範圍要跟影片等比例 fit
+    */
+    ctx_2d.drawImage(document.querySelector("video"),
+        (w_container - w_canvas) / 2, (h_container - h_canvas) / 2, w_canvas, h_canvas
+    );
+    /*
+        回傳 PNG on Base64
+    */
+    return canvas.toDataURL();
+}
 player.on("canplay", () => JAVASCRIPTOBJ.canplay(player.currentWidth(), player.currentHeight(), player.duration()));
 player.on("timeupdate", () => JAVASCRIPTOBJ.timeupdate(player.currentTime()));
 player.on("progress", () => JAVASCRIPTOBJ.progress(player.bufferedPercent()));

@@ -12,8 +12,6 @@ import com.shuyu.gsyvideoplayer.video.StandardGSYVideoPlayer;
 import com.shuyu.gsyvideoplayer.video.base.GSYVideoPlayer;
 import com.shuyu.gsyvideoplayer.video.base.GSYVideoViewBridge;
 
-import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
-
 public class WebViewGSYVideoPlayer extends StandardGSYVideoPlayer {
 
     static {
@@ -35,10 +33,10 @@ public class WebViewGSYVideoPlayer extends StandardGSYVideoPlayer {
 
     @Override
     protected void addTextureView() {
-        mTextureViewContainer.addView(
-                ((WebViewMediaPlayer) getGSYVideoManager().getPlayer().getMediaPlayer()).getWebView(),
-                new LayoutParams(MATCH_PARENT, MATCH_PARENT)
+        mTextureView = new WebViewWrapInGSYRenderView(
+                ((WebViewMediaPlayer) getGSYVideoManager().getPlayer().getMediaPlayer()).getWebView()
         );
+        mTextureView.addView(getContext(), mTextureViewContainer, mRotate, this, this, mEffectFilter, mMatrixGL, mRenderer, mMode);
     }
 
     protected void removeIMediaPlayer() {
