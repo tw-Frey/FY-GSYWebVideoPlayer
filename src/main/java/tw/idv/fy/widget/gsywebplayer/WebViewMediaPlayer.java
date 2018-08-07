@@ -28,6 +28,7 @@ import tv.danmaku.ijk.media.player.MediaInfo;
 import tv.danmaku.ijk.media.player.misc.ITrackInfo;
 
 @SuppressLint({"ClickableViewAccessibility", "SetJavaScriptEnabled"})
+@SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class WebViewMediaPlayer extends AbstractMediaPlayer {
 
     private static final String JAVASCRIPTOBJ = "JAVASCRIPTOBJ";
@@ -81,7 +82,9 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
 
     @Override
     public void prepareAsync() throws IllegalStateException {
-        mHandler.post(() -> {
+        if (mHandler == null) return; // 防呆
+        mHandler.postAtFrontOfQueue(() -> {
+            if (mHandler == null || mContext == null) return; // 防呆
             mWebView = new WebView(mContext) {
                 @Override
                 public boolean onTouchEvent(MotionEvent event) {
@@ -137,8 +140,11 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
 
     @Override
     public void start() throws IllegalStateException {
-        if (mWebView == null) return;
-        mHandler.post(() -> mWebView.evaluateJavascript("player.play()", null));
+        if (mHandler == null) return;
+        mHandler.post(() -> {
+            if (mWebView == null) return;
+            mWebView.evaluateJavascript("player.play()", null);
+        });
     }
 
     @Override
@@ -148,8 +154,11 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
 
     @Override
     public void pause() throws IllegalStateException {
-        if (mWebView == null) return;
-        mHandler.post(() -> mWebView.evaluateJavascript("player.pause()", null));
+        if (mHandler == null) return;
+        mHandler.post(() -> {
+            if (mWebView == null) return;
+            mWebView.evaluateJavascript("player.pause()", null);
+        });
     }
 
     @Override
@@ -173,8 +182,11 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
     @Override
     public void seekTo(long time) throws IllegalStateException {
         mCurrentTime = time;
-        if (mWebView == null) return;
-        mHandler.post(() -> mWebView.evaluateJavascript(String.format(Locale.TAIWAN, "player.currentTime(%f)", time / 1000f), null));
+        if (mHandler == null) return;
+        mHandler.post(() -> {
+            if (mWebView == null) return;
+            mWebView.evaluateJavascript(String.format(Locale.TAIWAN, "player.currentTime(%f)", time / 1000f), null);
+        });
     }
 
     @Override
@@ -190,8 +202,15 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
     @Override
     public void release() {
         Log.i("Faty", "release");
-        if (mWebView == null) return;
-        mHandler.post(() -> mWebView.evaluateJavascript("player.dispose()", null));
+        if (mHandler == null) return;
+        mHandler.postAtFrontOfQueue(() -> {
+            if (mWebView == null) return;
+            mWebView.evaluateJavascript("player.dispose()", null);
+            mWebView = null;
+        });
+        mHandler = null;
+        mContext = null;
+        resetListeners();
     }
 
     @Override
@@ -223,7 +242,7 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
     @Deprecated
     @Override
     public boolean isPlayable() {
-        return true;
+        return mWebView != null;
     }
 
     @Override
@@ -237,12 +256,12 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
 
     @Override
     public int getVideoSarNum() {
-        return 0;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public int getVideoSarDen() {
-        return 0;
+        throw new UnsupportedOperationException();
     }
 
     @Deprecated
@@ -254,8 +273,11 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
     @Override
     public void setLooping(boolean isLooping) {
         mLooping = isLooping;
-        if (mWebView == null) return;
-        mHandler.post(() -> mWebView.evaluateJavascript(isLooping ? "player.loop(true)" : "player.loop(false)", null));
+        if (mHandler == null) return;
+        mHandler.post(() -> {
+            if (mWebView == null) return;
+            mWebView.evaluateJavascript(isLooping ? "player.loop(true)" : "player.loop(false)", null);
+        });
     }
 
     @Override
@@ -270,14 +292,20 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
 
     public void setNeedMute(boolean needMute) {
         mNeedMute = needMute;
-        if (mWebView == null) return;
-        mHandler.post(() -> mWebView.evaluateJavascript(needMute ? "player.muted(true)" : "player.muted(false)", null));
+        if (mHandler == null) return;
+        mHandler.post(() -> {
+            if (mWebView == null) return;
+            mWebView.evaluateJavascript(needMute ? "player.muted(true)" : "player.muted(false)", null);
+        });
     }
 
     public void setSpeedPlaying(float speed) {
         mSpeed = speed;
-        if (mWebView == null) return;
-        mHandler.post(() -> mWebView.evaluateJavascript(String.format(Locale.TAIWAN, "player.playbackRate(%f)", speed), null));
+        if (mHandler == null) return;
+        mHandler.post(() -> {
+            if (mWebView == null) return;
+            mWebView.evaluateJavascript(String.format(Locale.TAIWAN, "player.playbackRate(%f)", speed), null);
+        });
     }
 
     public WebView getWebView() {
@@ -286,28 +314,36 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
 
     @JavascriptInterface
     public void ready() {
-        if (mWebView == null) return;
-        mHandler.post(() -> mWebView.evaluateJavascript(String.format(Locale.TAIWAN,"play('%s', %f, %d, %b, %b)", mUri, mSpeed, mCurrentTime, mNeedMute, mLooping), null));
+        if (mHandler == null) return;
+        mHandler.post(() -> {
+            if (mWebView == null) return;
+            mWebView.evaluateJavascript(String.format(Locale.TAIWAN, "play('%s', %f, %d, %b, %b)", mUri, mSpeed, mCurrentTime, mNeedMute, mLooping), null);
+        });
     }
 
     @JavascriptInterface
     public void canplay(float width, float height, float duration) {
+        if (mHandler == null || mWebView == null) return;
         mWidth = (int) width;
         mHeight = (int) height;
         mDuration = (long) (duration * 1000L);
+        if (isPrepared) return;
+        else isPrepared = true;
         notifyOnPrepared();
     }
 
     @JavascriptInterface
     public void seeked() {
-        Log.i("Faty", "seeked");
+        if (mHandler == null || mWebView == null) return;
         notifyOnSeekComplete();
+        Log.i("Faty", "seeked");
     }
 
     @JavascriptInterface
     public void ended() {
-        Log.i("Faty", "ended");
+        if (mHandler == null || mWebView == null) return;
         notifyOnCompletion();
+        Log.i("Faty", "ended");
     }
 
     @JavascriptInterface
@@ -321,12 +357,12 @@ public class WebViewMediaPlayer extends AbstractMediaPlayer {
     }
 
     private Handler mHandler;
-    private int mWidth;
-    private int mHeight;
-    private long mDuration;
-    private long mCurrentTime;
+    private int mWidth = -1;
+    private int mHeight = -1;
+    private long mDuration = -1;
+    private long mCurrentTime = -1;
     private float mSpeed = 1;
     private boolean mLooping = false;
     private boolean mNeedMute = false;
-
+    private boolean isPrepared = false;
 }
