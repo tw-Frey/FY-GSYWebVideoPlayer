@@ -30,6 +30,7 @@ class WebViewWrapInGSYRenderView extends GSYRenderView {
 
     WebViewWrapInGSYRenderView(WebView webView) {
         this.webView = webView;
+        if (this.webView == null) return; // 防呆(無奈)
         this.mShowView = new IGSYRenderView() {
 
             @Override
@@ -158,6 +159,7 @@ class WebViewWrapInGSYRenderView extends GSYRenderView {
      */
     @Override
     public void addView(Context context, ViewGroup textureViewContainer, int rotate, IGSYSurfaceListener gsySurfaceListener, MeasureHelper.MeasureFormVideoParamsListener videoParamsListener, GSYVideoGLView.ShaderInterface effect, float[] transform, GSYVideoGLViewBaseRender customRender, int mode) {
+        if (webView == null) return; // 防呆(無奈); TODO: 應該加一個layout, 爾後 webview 加入至該layput
         ViewParent viewParent = webView.getParent();
         if (textureViewContainer.equals(viewParent)) return;
         if (viewParent instanceof ViewGroup) {
